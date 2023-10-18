@@ -1,4 +1,3 @@
-using System;
 using AutoMapper;
 using GloboTicket.Services.EventCatalog.DbContexts;
 using GloboTicket.Services.EventCatalog.Repositories;
@@ -9,6 +8,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using System;
+using System.Net.Http;
+using Polly;
+using Polly.Extensions.Http;
 
 namespace GloboTicket.Services.EventCatalog
 {
@@ -43,10 +46,16 @@ namespace GloboTicket.Services.EventCatalog
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+                {
+                    var context = serviceScope.ServiceProvider.GetRequiredService<EventCatalogDbContext>();
+                    context.Database.Migrate();
+                }
             }
-
-            app.UseHttpsRedirection();
-
+            if (Configuration["DOTNET_RUNNING_IN_CONTAINER"] != "true")
+            {
+                app.UseHttpsRedirection();
+            }
             app.UseSwagger();
 
             app.UseSwaggerUI(c =>
